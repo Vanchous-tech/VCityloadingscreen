@@ -544,7 +544,7 @@
             perPage: 1
         },
         music: {
-            volume: 60 // Громкость по умолчанию (35%)
+            volume: 60 // Громкость по умолчанию в браузере (60%); в GMod используется snd_musicvolume
         }
     };
 
@@ -689,7 +689,12 @@
 
     KLoad.on('GameDetails', function (servername, serverurl, mapname, maxplayers, steamid, gamemode, volume) {
         if (volume !== undefined && volume !== null) {
-            KLoad.Music.setVolume(volume);
+            // GMod передаёт snd_musicvolume в диапазоне 0..1,
+            // а setVolume() принимает проценты 0..100.
+            var gameVolume = Number(volume);
+            if (isFinite(gameVolume)) {
+                KLoad.Music.setVolume(gameVolume * 100);
+            }
         }
     });
 
@@ -892,7 +897,7 @@
 
         init: function (music, volume) {
             this.data.songs = music || [];
-            this.data.volume = Math.max(0, Math.min(1, (volume || 35) / 100));
+            this.setVolume(volume);
             this.setupAudio();
 
             if (this.data.songs.length) {
@@ -992,8 +997,11 @@
             }
         },
 
+        // Громкость в процентах. Значение 0 означает тишину, а не значение по умолчанию.
         setVolume: function (vol) {
-            this.data.volume = Math.max(0, Math.min(1, (vol || 35) / 100));
+            var percent = (vol === undefined || vol === null) ? 35 : Number(vol);
+            if (!isFinite(percent)) percent = 35;
+            this.data.volume = Math.max(0, Math.min(1, percent / 100));
             if (this.audio) this.audio.volume = this.data.volume;
             return this;
         },
